@@ -19,6 +19,7 @@ import { RuntimeConfigStore, ToolSearchConfigSchema } from './config.ts'
 import { ToolSearchEngine } from './engine.ts'
 import { registerBridgeTools, BRIDGE_NAMES, type BridgeDeps } from './bridge.ts'
 import { registerManagementTools, registerSetupSkill, MANAGEMENT_NAMES } from './setup.ts'
+import { PTC_TRANSPORT_TOOL } from './ptc.ts'
 import type { ToolSearchConfig } from './types.ts'
 
 export const name = 'dsh-tool-search'
@@ -26,7 +27,9 @@ export const inject = ['tools', 'skills']
 
 export const Config = ToolSearchConfigSchema
 
-const BLOCKED_FROM_BRIDGE = new Set<string>([...BRIDGE_NAMES, ...MANAGEMENT_NAMES, 'skill'])
+// `run_code` is a direct-call transport, never a deferred catalog entry the
+// bridge may invoke by name.
+const BLOCKED_FROM_BRIDGE = new Set<string>([...BRIDGE_NAMES, ...MANAGEMENT_NAMES, 'skill', PTC_TRANSPORT_TOOL])
 
 /**
  * Apply the plugin: register the assemble waterfall transform, the three

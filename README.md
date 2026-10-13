@@ -99,6 +99,7 @@ Tool groups, the matcher, and preload live in the runtime file (`~/.dsh/dsh-tool
 
 - Slimming only rewrites the **model-visible surface** (`system-prompt/assemble`); the registry stays complete, so deferred tools remain executable.
 - The bridge, the two setup tools, and `skill` are always eager and never defer themselves.
+- **PTC (`run_code`) scopes are left untouched.** A scope presenting tools as generated SDK code sees its wire table collapsed to `run_code` alone, with every declaration moved into the `tools:sdk` prompt section. Replacing that table would delete `run_code` from the prompt while the declarations this plugin exists to slim stay in place, so the plugin skips such a scope entirely. In a `both` scope the `run_code` transport stays eager (and the bridge refuses to invoke it by name); native sessions are unaffected.
 - Keyword matching is only a **fallback**: rerank is the primary ranking; without a matcher or on rerank failure, search degrades to keyword matching (exact name > name tokens > description tokens) and never errors.
 - See [DESIGN.md](DESIGN.md) for the full architecture.
 

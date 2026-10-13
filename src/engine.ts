@@ -9,6 +9,7 @@ import { BRIDGE_NAMES } from './bridge.ts'
 import { keywordSearch, searchCatalog } from './matcher.ts'
 import { RuntimeConfigStore } from './config.ts'
 import { applyDisclosure, budgetFor, computeDisclosure, computeTier } from './disclosure.ts'
+import { isPtcOnlyAssembly, transportNamesIn } from './ptc.ts'
 import { estimateTokens } from './catalog.ts'
 import { buildGroupedManifest } from './groups.ts'
 import type {
@@ -82,18 +83,24 @@ export class ToolSearchEngine {
    * Transform one settled assembly: replace `assembly.tools` with the eager
    * core, bridge tools, and warm tools, and append the tiered manifest as a
    * runtime context (sections may be clobbered by a complete prompt; contexts
-   * survive). Tier 0 returns the assembly untouched. Idempotent: the catalog
+   * survive). Tier 0 returns the assembly untouched, and so does a strict
+   * `ptc` scope, whose collapse owns the tool table. Idempotent: the catalog
    * is re-read from the registry on every call.
    * @param assembly - the settled assembly from the waterfall chain.
    * @param scope - the calling agent (or undefined for the global view).
    * @returns the transformed assembly.
    */
   async assemble(assembly: PromptAssembly, scope: object | undefined): Promise<PromptAssembly> {
+    // A strict `ptc` scope owns its tool table: `dsh-tools` collapses it to the
+    // `run_code` transport and moves every declaration into `tools:sdk`.
+    // Replacing the table would delete `run_code` from the prompt and leave the
+    // SDK declarations — the tokens this plugin exists to slim — untouched.
+    if (isPtcOnlyAssembly(assembly)) return assembly
     const agent = agentOf(scope)
     const runtime = await this.store.resolve(this.config.configScope, cwdOf(agent))
     const groups = runtime.config.groups ?? []
     const entries = snapshotCatalog(this.ctx.tools.schemas(agent ?? undefined), groups)
-    const eager = await this.eagerNames(agent, entries, runtime.config)
+    const eager = await this.eagerNames(agent, entries, runtime.config, transportNamesIn(assembly))
     const deferred = entries.filter(entry => !eager.has(entry.name))
     if (deferred.length === 0) return assembly
     const forced = this.config.enabled === 'on'
@@ -249,9 +256,14 @@ export class ToolSearchEngine {
     return [...(this.warm.get(agent.session.id) ?? new Map<string, number>()).keys()]
   }
 
-  private async eagerNames(agent: Agent | undefined, entries: readonly CatalogEntry[], runtime: RuntimeFileConfig): Promise<Set<string>> {
+  private async eagerNames(
+    agent: Agent | undefined,
+    entries: readonly CatalogEntry[],
+    runtime: RuntimeFileConfig,
+    transport: readonly string[] = [],
+  ): Promise<Set<string>> {
     const preload = await this.preloadNames(agent, entries, runtime)
-    return new Set<string>([...this.config.core, ...(runtime.core ?? []), ...FORCED_EAGER, ...this.warmNamesFor(agent), ...preload])
+    return new Set<string>([...this.config.core, ...(runtime.core ?? []), ...FORCED_EAGER, ...transport, ...this.warmNamesFor(agent), ...preload])
   }
 
   private async preloadNames(agent: Agent | undefined, entries: readonly CatalogEntry[], runtime: RuntimeFileConfig): Promise<string[]> {

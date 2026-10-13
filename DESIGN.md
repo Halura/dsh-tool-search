@@ -170,6 +170,7 @@ preload 开启 → 记警告并保持不激活（不 fail-loud，因配置可由
 | 无 matcher 时搜索死路 | 关键词兜底（精确名>名字子串>描述），永不报错 |
 | 隐藏的工具永远找不到 | warm 机制：搜/查/调过的工具自动注入可见集 |
 | 配置改了不生效 | mtime 热重载 + 写入时主动失效 |
+| PTC 作用域被当成 native 改写（顶掉 run_code） | `isPtcOnlyAssembly`：`tools:ptc-only` 段非空即整段放行；`both` 场景把 run_code 并入 eager，桥拒调 |
 
 ## 6. 里程碑
 

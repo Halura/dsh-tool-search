@@ -99,6 +99,7 @@ dsh plugin --profile web add dsh-tool-search
 
 - 瘦身只改写**模型可见表面**（`system-prompt/assemble`），注册表保持完整，延迟工具仍可执行。
 - 桥、两个配置工具和 `skill` 永远 eager，不会被自己延迟。
+- **PTC（`run_code`）作用域整段放行。** 以生成式 SDK 代码呈现工具的作用域，其线上工具表已被 `dsh-tools` 折叠成只剩 `run_code`，所有声明挪进 `tools:sdk` 提示词段。改写该表会把 `run_code` 从提示词里抹掉，而要瘦身的声明仍留在原处，因此插件对这类作用域不做任何变换。`both` 模式下 `run_code` 保持 eager（桥也拒绝按名调用它）；native 会话不受影响。
 - 关键词匹配只作为**兜底**：rerank 是首选排序，未配置 matcher 或 rerank 失败时降级（精确名 > 名字词 > 描述词），搜索永不报错。
 - 完整架构见 [DESIGN.md](DESIGN.md)。
 

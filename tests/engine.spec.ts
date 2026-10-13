@@ -127,6 +127,20 @@ describe('plugin assembly transform', () => {
     expect(assembly.tools.map(tool => tool.name)).toContain('echo_test')
   })
 
+  it('leaves a strict PTC assembly untouched, run_code included', async () => {
+    const { ctx, engine } = await harness(baseConfig({ enabled: 'on' }))
+    registerCatalog(ctx)
+    const assembly = {
+      sections: [{ name: 'tools:ptc-only', text: '`run_code` is the only tool you can call directly' }],
+      contexts: [],
+      tools: [{ name: 'run_code', description: 'execute a program', parameters: { type: 'object', properties: {} } }],
+      variables: {},
+    }
+    // Identity: the collapse owns this scope's tool table and its SDK section,
+    // so the plugin must not replace either.
+    expect(await engine.assemble(assembly, undefined)).toBe(assembly)
+  })
+
   it('falls back to a group summary when even names overflow the budget', async () => {
     const { ctx } = await harness(baseConfig({ contextWindow: 2000, thresholdPct: 1, listingMaxTokens: 100 }))
     registerCatalog(ctx, 12)
